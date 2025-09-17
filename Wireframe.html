@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GGH Tax Suite — Taxpayer • Admin • GIS</title>
+<style>
+  :root{
+    --bg:#f7f8fb;
+    --fg:#0f172a;
+    --muted:#6b7280;
+    --line:#e5e7eb;
+    --brand:#8b1d0e;
+    --brand-2:#b1321c;
+    --card:#ffffff;
+    --panel:#ffffff;
+    --good:#10b981;
+    --warn:#f59e0b;
+    --bad:#ef4444;
+    --shadow:0 10px 30px rgba(2,6,23,.08);
+    --radius:14px;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font:14px/1.6 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  }
+  a{ color:inherit; text-decoration:none; }
+  .container{ max-width:1200px; margin:0 auto; padding:0 16px; }
+  .hidden{ display:none !important; }
+
+  /* Buttons / tags */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    padding:10px 16px; border-radius:10px; border:1px solid transparent;
+    background:var(--brand); color:#fff; font-weight:700; cursor:pointer;
+    transition:.2s ease; box-shadow:0 6px 16px rgba(139,29,14,.18);
+  }
+  .btn:hover{ background:var(--brand-2); transform:translateY(-1px); }
+  .btn.ghost{ background:#fff; color:var(--brand); border-color:var(--line); box-shadow:none; }
+  .btn.small{ padding:6px 10px; font-weight:600; }
+  .tag{ font-size:12px; padding:2px 8px; border-radius:999px; background:#eef2ff; color:#3730a3; }
+
+  /* App view switcher */
+  .view-switch{
+    position:sticky; top:0; z-index:50; background:#fff; border-bottom:1px solid var(--line);
+  }
+  .view-switch .container{ display:flex; align-items:center; gap:12px; padding:10px 16px; }
+  .view-switch .logo{ font-weight:900; letter-spacing:.3px; color:var(--brand); }
+  .tabs{ margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+  .tab{ padding:8px 12px; border-radius:999px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  .tab.active{ background:var(--brand); color:#fff; border-color:var(--brand); }
+
+  /* View headers / navbars */
+  header.view-header{ background:#fff; border-bottom:1px solid var(--line); position:sticky; top:48px; z-index:40; }
+  .view-header .wrap{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 0; }
+  .nav{ display:flex; gap:18px; flex-wrap:nowrap; overflow:auto; }
+  .nav a{ color:var(--muted); font-weight:700; white-space:nowrap; padding:8px 10px; border-radius:10px; }
+  .nav a.active, .nav a:hover{ color:#fff; background:var(--brand); }
+  .nav a[data-switch-view]{ color:var(--brand); background:#fff; border:1px dashed var(--brand); }
+
+  /* Sections / cards */
+  .section{ padding:24px 0; }
+  .grid{ display:grid; gap:16px; }
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow);
+    padding:16px;
+  }
+  .kpi{ display:flex; align-items:center; justify-content:space-between; }
+  .kpi h3{ margin:0; font-size:12px; color:var(--muted); font-weight:900; text-transform:uppercase; letter-spacing:.06em; }
+  .kpi .val{ font-size:28px; font-weight:900; }
+  table{ width:100%; border-collapse:collapse; }
+  th,td{ padding:12px; border-bottom:1px solid var(--line); text-align:left; }
+  th{ color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+  tr:hover td{ background:#fafafa; }
+
+  /* TAXPAYER layout */
+  #view-taxpayer .dashboard{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+  #view-taxpayer .two-col{ grid-template-columns: 1.2fr .8fr; }
+  .vsec{ /* per-view sections */ }
+
+  /* ADMIN layout */
+  #view-admin .layout{ display:grid; grid-template-columns: 260px 1fr; gap:16px; }
+  #view-admin .sidebar .quick a{ display:block; padding:10px 12px; border:1px dashed var(--line); border-radius:10px; margin-bottom:10px; background:#fff; }
+  #view-admin .cards{ grid-template-columns: repeat(4, minmax(0,1fr)); }
+
+  /* GIS layout */
+  #view-gis .frame{
+    position:relative; height:70vh; border-radius:var(--radius); overflow:hidden; border:1px solid var(--line); background:#f0f4f8;
+  }
+  #view-gis .map{
+    position:absolute; inset:0; background:
+      radial-gradient(circle at 1px 1px, rgba(0,0,0,.06) 1px, transparent 0) 0 0/40px 40px,
+      linear-gradient(180deg, #dbeafe, #e5e7eb);
+  }
+  #view-gis .zoom{ position:absolute; top:10px; left:10px; display:flex; flex-direction:column; gap:6px; }
+  #view-gis .zoom button{ width:36px; height:36px; border-radius:10px; border:1px solid var(--line); background:#fff; font-weight:900; cursor:pointer; box-shadow:var(--shadow); }
+  #view-gis .search{
+    position:absolute; top:10px; left:50%; transform:translateX(-50%);
+    background:#fff; border:1px solid var(--line); border-radius:999px; box-shadow:var(--shadow);
+    display:flex; overflow:hidden;
+  }
+  #view-gis .search input{ border:0; padding:10px 12px; width:260px; outline:none; }
+  #view-gis .search button{ border:0; padding:0 12px; background:var(--brand); color:#fff; font-weight:700; cursor:pointer; }
+
+  #view-gis .layers{
+    position:absolute; top:10px; left:10px; transform:translateX(52px);
+    width:240px; max-height:calc(70vh - 20px); overflow:auto;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); padding:10px;
+  }
+  #view-gis .analytics{
+    position:absolute; top:10px; right:10px; width:320px; max-height:calc(70vh - 20px);
+    overflow:auto; background:var(--panel); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); padding:10px;
+  }
+  #view-gis .layers h4, #view-gis .analytics h4{ margin:6px 0 10px; font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+  #view-gis .layer{ display:flex; align-items:center; gap:8px; padding:8px 6px; border-radius:8px; }
+  #view-gis .layer:hover{ background:#fafafa; }
+
+  .chart{ height:140px; border:1px dashed var(--line); border-radius:10px; background:#fff; display:grid; place-items:center; color:var(--muted); }
+
+  /* Dummy overlays */
+  .overlay{ position:absolute; pointer-events:none; }
+  .overlay.tax-zones{ inset:20% 20% 40% 10%; background:rgba(139,29,14,.15); border:2px solid rgba(139,29,14,.45); border-radius:8px; }
+  .overlay.properties{ inset:auto auto 15% 55%; width:35%; height:30%; border:3px dashed rgba(16,185,129,.8); border-radius:10px; }
+  .overlay.payments{ inset:auto 20% 20% auto; width:180px; height:180px; border-radius:50%; background: radial-gradient(circle, rgba(239,68,68,.5), rgba(239,68,68,.1)); }
+  .overlay.infrastructure{ left:12%; right:12%; top:60%; height:6px; background: repeating-linear-gradient(90deg, rgba(59,130,246,.7) 0 24px, transparent 24px 32px); border-radius:4px; }
+
+  /* Footers */
+  footer{ border-top:1px solid var(--line); background:#fff; color:var(--muted); }
+  footer .wrap{ padding:14px 0; display:flex; gap:16px; flex-wrap:wrap; justify-content:center; }
+
+  /* Responsive */
+  @media (max-width:1100px){
+    #view-taxpayer .dashboard{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+    #view-admin .cards{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+    #view-admin .layout{ grid-template-columns: 1fr; }
+  }
+  @media (max-width:780px){
+    #view-taxpayer .two-col{ grid-template-columns:1fr; }
+    .nav{ gap:10px; }
+    #view-gis .layers{ transform:none; left:10px; width:220px; }
+    #view-gis .analytics{ width:260px; }
+    #view-gis .search input{ width:200px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- App-level view switcher -->
+<div class="view-switch">
+  <div class="container">
+    <div class="logo">GGH Tax Suite</div>
+    <div class="tabs">
+      <button class="tab active" data-target="view-taxpayer">Taxpayer View</button>
+      <button class="tab" data-target="view-admin">Admin View</button>
+      <button class="tab" data-target="view-gis">GIS View</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= TAXPAYER VIEW ================= -->
+<section id="view-taxpayer">
+  <header class="view-header">
+    <div class="container wrap">
+      <div class="logo">Logo</div>
+      <nav class="nav" data-nav="taxpayer">
+        <a href="#" class="active" data-target="tax-home">Home</a>
+        <a href="#" data-target="tax-profile">My Profile</a>
+        <a href="#" data-target="tax-payments">Tax Payments</a>
+        <a href="#" data-target="tax-support">Support</a>
+        <a href="#" data-logout>Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- Home / Dashboard -->
+    <section id="tax-home" class="vsec section">
+      <h2>Dashboard Overview</h2>
+      <div class="grid dashboard">
+        <div class="card">
+          <div class="kpi">
+            <h3>Total Taxes Due</h3>
+            <div class="val">₱ 124,500</div>
+          </div>
+          <div style="margin-top:8px;color:var(--muted);font-size:12px">Next deadline: <span class="tag">Oct 31</span></div>
+        </div>
+        <div class="card">
+          <h3 style="margin:0 0 8px">Payment History (Last 5)</h3>
+          <table>
+            <thead><tr><th>Date</th><th>Type</th><th>Amount</th></tr></thead>
+            <tbody>
+              <tr><td>2025-09-14</td><td>Property</td><td>₱ 8,000</td></tr>
+              <tr><td>2025-08-12</td><td>Income</td><td>₱ 12,000</td></tr>
+              <tr><td>2025-07-10</td><td>Business</td><td>₱ 6,500</td></tr>
+              <tr><td>2025-06-09</td><td>Property</td><td>₱ 7,200</td></tr>
+              <tr><td>2025-05-05</td><td>Income</td><td>₱ 10,000</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h3 style="margin:0 0 8px">Notifications / Alerts</h3>
+          <ul style="margin:0; padding-left:18px;">
+            <li>Quarterly income tax due <b>Oct 31</b>.</li>
+            <li>Property assessment updated for 2025.</li>
+            <li>Receipt for payment on Sep 14 available.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- My Profile -->
+    <section id="tax-profile" class="vsec section hidden">
+      <h2>My Profile</h2>
+      <div class="grid" style="grid-template-columns:1fr 1fr;">
+        <div class="card">
+          <h3>Personal Information</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <label>First Name <input placeholder="Juan" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;"></label>
+            <label>Last Name <input placeholder="Dela Cruz" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;"></label>
+            <label>Email <input placeholder="juan@email.com" type="email" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;"></label>
+            <label>Phone <input placeholder="+63 9xx xxx xxxx" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;"></label>
+          </div>
+          <div style="margin-top:12px;"><button class="btn">Save Changes</button></div>
+        </div>
+        <div class="card">
+          <h3>Mailing Address</h3>
+          <label>Street <input placeholder="123 Sample St" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;"></label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+            <label>City <input placeholder="Quezon City" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;"></label>
+            <label>ZIP <input placeholder="1100" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;"></label>
+          </div>
+          <div style="margin-top:12px;"><button class="btn ghost">Update Address</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tax Payments -->
+    <section id="tax-payments" class="vsec section hidden">
+      <h2>Tax Payments</h2>
+      <div class="grid two-col">
+        <form class="card" onsubmit="event.preventDefault(); alert('Submit Payment (UI only)');">
+          <div style="display:grid; gap:12px;">
+            <label>Tax Type
+              <select style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px">
+                <option>Income Tax</option>
+                <option>Property Tax</option>
+                <option>Business Tax</option>
+              </select>
+            </label>
+            <label>Amount Due (auto)
+              <input type="text" disabled value="₱ 12,450"
+                style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fafafa">
+            </label>
+            <label>Payment Method
+              <select style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px">
+                <option>Credit Card</option>
+                <option>Bank Transfer</option>
+                <option>GCash</option>
+              </select>
+            </label>
+            <button class="btn" type="submit">Submit Payment</button>
+          </div>
+        </form>
+        <div class="card">
+          <h3 style="margin:0 0 6px;">Payment History</h3>
+          <table>
+            <thead><tr><th>Date</th><th>Type</th><th>Amount</th></tr></thead>
+            <tbody>
+              <tr><td>2025-09-14</td><td>Property</td><td>₱ 8,000</td></tr>
+              <tr><td>2025-08-12</td><td>Income</td><td>₱ 12,000</td></tr>
+              <tr><td>2025-07-10</td><td>Business</td><td>₱ 6,500</td></tr>
+              <tr><td>2025-06-09</td><td>Property</td><td>₱ 7,200</td></tr>
+              <tr><td>2025-05-05</td><td>Income</td><td>₱ 10,000</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Support -->
+    <section id="tax-support" class="vsec section hidden">
+      <h2>Support</h2>
+      <div class="grid" style="grid-template-columns: 1fr .8fr;">
+        <div class="card">
+          <h3>FAQ</h3>
+          <ul style="margin:0;padding-left:18px;">
+            <li>How to compute quarterly income tax?</li>
+            <li>Where can I download receipts?</li>
+            <li>What payment methods are accepted?</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Contact Support</h3>
+          <p>Need help? Reach out and we’ll get back to you.</p>
+          <button class="btn">Open Ticket</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="container wrap">
+      <div class="wrap" style="justify-content:center; width:100%; gap:18px;">
+        <a href="#">Privacy Policy</a> •
+        <a href="#">Terms of Service</a> •
+        <a href="#">Contact</a>
+      </div>
+    </div>
+  </footer>
+</section>
+
+<!-- ================= ADMIN VIEW ================= -->
+<section id="view-admin" class="hidden">
+  <header class="view-header">
+    <div class="container wrap">
+      <div class="logo">Logo</div>
+      <nav class="nav" data-nav="admin">
+        <a href="#" class="active" data-target="admin-dashboard">Dashboard</a>
+        <a href="#" data-target="admin-taxpayers">Taxpayers</a>
+        <a href="#" data-target="admin-payments">Payments</a>
+        <a href="#" data-target="admin-reports">Reports</a>
+        <a href="#" data-switch-view="view-gis">GIS</a>
+        <a href="#" data-target="admin-settings">Settings</a>
+        <a href="#" data-logout>Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container section">
+    <div class="layout">
+
+      <!-- Sidebar -->
+      <aside class="sidebar card">
+        <h3 style="margin:0 0 10px;">Quick Links</h3>
+        <div class="quick">
+          <a href="#">+ Add Taxpayer</a>
+          <a href="#">Generate Report</a>
+          <a href="#">System Alerts</a>
+        </div>
+      </aside>
+
+      <!-- Content area with internal sections -->
+      <div>
+
+        <!-- Dashboard -->
+        <section id="admin-dashboard" class="vsec">
+          <div class="grid cards" style="padding-top:0">
+            <div class="card"><div class="kpi"><h3>Total Taxpayers</h3><div class="val">3,248</div></div></div>
+            <div class="card"><div class="kpi"><h3>Total Payments Received</h3><div class="val">₱ 128.4M</div></div></div>
+            <div class="card"><div class="kpi"><h3>Pending Payments</h3><div class="val" style="color:var(--warn)">112</div></div></div>
+            <div class="card"><div class="kpi"><h3>System Alerts</h3><div class="val" style="color:var(--bad)">3</div></div></div>
+          </div>
+          <div class="card">
+            <h3 style="margin:0 0 10px;">System Alerts</h3>
+            <ul style="margin:0; padding-left:18px;">
+              <li>Payment gateway scheduled maintenance (Oct 10).</li>
+              <li>Two taxpayers flagged for audit review.</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- Taxpayers table -->
+        <section id="admin-taxpayers" class="vsec hidden">
+          <div class="card">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+              <h3 style="margin:0">Taxpayer Management</h3>
+              <input placeholder="Search…" style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;min-width:220px;">
+            </div>
+            <div style="overflow:auto;">
+              <table>
+                <thead>
+                  <tr><th>Taxpayer ID</th><th>Name</th><th>Tax Type</th><th>Amount Due</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>TX-1001</td><td>Juan Dela Cruz</td><td>Property</td><td>₱ 8,500</td>
+                    <td><span class="tag" style="background:#fef3c7;color:#b45309;">Pending</span></td>
+                    <td><button class="btn small">View</button> <button class="btn small ghost">Edit</button> <button class="btn small ghost">Delete</button></td>
+                  </tr>
+                  <tr><td>TX-1002</td><td>Maria Santos</td><td>Income</td><td>₱ 0</td>
+                    <td><span class="tag" style="background:#dcfce7;color:#065f46;">Cleared</span></td>
+                    <td><button class="btn small">View</button> <button class="btn small ghost">Edit</button> <button class="btn small ghost">Delete</button></td>
+                  </tr>
+                  <tr><td>TX-1003</td><td>Carlos Reyes</td><td>Business</td><td>₱ 12,400</td>
+                    <td><span class="tag" style="background:#fee2e2;color:#991b1b;">Overdue</span></td>
+                    <td><button class="btn small">View</button> <button class="btn small ghost">Edit</button> <button class="btn small ghost">Delete</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Payments -->
+        <section id="admin-payments" class="vsec hidden">
+          <div class="card">
+            <h3 style="margin:0 0 10px;">Payments</h3>
+            <table>
+              <thead><tr><th>Txn ID</th><th>Taxpayer</th><th>Type</th><th>Amount</th><th>Date</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr><td>PMT-001</td><td>Juan Dela Cruz</td><td>Property</td><td>₱ 8,000</td><td>2025-09-14</td><td><span class="tag" style="background:#dcfce7;color:#065f46;">Success</span></td></tr>
+                <tr><td>PMT-002</td><td>Maria Santos</td><td>Income</td><td>₱ 12,000</td><td>2025-08-12</td><td><span class="tag" style="background:#fef3c7;color:#b45309;">Pending</span></td></tr>
+                <tr><td>PMT-003</td><td>Carlos Reyes</td><td>Business</td><td>₱ 6,500</td><td>2025-07-10</td><td><span class="tag" style="background:#fee2e2;color:#991b1b;">Failed</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Reports -->
+        <section id="admin-reports" class="vsec hidden">
+          <div class="card" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <h3 style="margin:0 10px 0 0;">Reports</h3>
+            <select style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;">
+              <option>Monthly</option>
+              <option>Quarterly</option>
+              <option>Yearly</option>
+            </select>
+            <div style="margin-left:auto; display:flex; gap:8px;">
+              <button class="btn ghost">Export CSV</button>
+              <button class="btn">Export PDF</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Settings -->
+        <section id="admin-settings" class="vsec hidden">
+          <div class="card" style="display:grid; gap:10px;">
+            <h3 style="margin:0">Settings</h3>
+            <label>Enable Alerts <input type="checkbox" checked></label>
+            <label>Default Report Period
+              <select style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;">
+                <option>Monthly</option><option>Quarterly</option><option>Yearly</option>
+              </select>
+            </label>
+            <div><button class="btn">Save Settings</button></div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container wrap">
+      <div class="wrap" style="justify-content:center; width:100%; gap:18px;">
+        <a href="#">Privacy Policy</a> •
+        <a href="#">Terms of Service</a> •
+        <a href="#">Contact</a>
+      </div>
+    </div>
+  </footer>
+</section>
+
+<!-- ================= GIS VIEW ================= -->
+<section id="view-gis" class="hidden">
+  <header class="view-header">
+    <div class="container wrap">
+      <div class="logo">Logo</div>
+      <nav class="nav" data-nav="gis">
+        <a href="#" class="active" data-target="gis-map">Map View</a>
+        <a href="#" data-target="gis-layers">Layers</a>
+        <a href="#" data-target="gis-analytics">Analytics</a>
+        <a href="#" data-target="gis-settings">Settings</a>
+        <a href="#" data-logout>Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container section">
+    <!-- ONE shared frame; we toggle side panels depending on active tab -->
+    <section id="gis-map" class="vsec">
+      <div class="frame">
+        <div class="map" id="map">
+          <div class="overlay tax-zones" data-layer="taxZones"></div>
+          <div class="overlay properties" data-layer="properties"></div>
+          <div class="overlay payments" data-layer="payments"></div>
+          <div class="overlay infrastructure" data-layer="infra"></div>
+        </div>
+
+        <div class="zoom">
+          <button id="zoomIn">+</button>
+          <button id="zoomOut">−</button>
+        </div>
+
+        <div class="search">
+          <input id="searchBox" placeholder="Search address or tax zone…" />
+          <button id="searchBtn">Search</button>
+        </div>
+
+        <!-- Panels (we toggle visibility in JS based on active GIS tab) -->
+        <aside class="layers" id="layersPanel">
+          <h4>Layers</h4>
+          <label class="layer"><input type="checkbox" checked data-toggle="taxZones"> Tax Zones</label>
+          <label class="layer"><input type="checkbox" checked data-toggle="properties"> Property Boundaries</label>
+          <label class="layer"><input type="checkbox" checked data-toggle="payments"> Payment Status</label>
+          <label class="layer"><input type="checkbox" checked data-toggle="infra"> Infrastructure</label>
+        </aside>
+
+        <aside class="analytics" id="analyticsPanel">
+          <h4>Analytics</h4>
+          <div class="card" style="margin-bottom:10px;">
+            <strong>Tax Collection by Region</strong>
+            <div class="chart">Chart placeholder</div>
+          </div>
+          <div class="card" style="margin-bottom:10px;">
+            <strong>Payment Delinquency Heatmap</strong>
+            <div class="chart">Heatmap placeholder</div>
+          </div>
+          <div class="card">
+            <strong>Property Value Trends</strong>
+            <div class="chart">Trend placeholder</div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Layers info screen (keeps the same frame above for realism) -->
+    <section id="gis-layers" class="vsec hidden">
+      <div class="card" style="margin-bottom:12px;">
+        <h3 style="margin:0">Layers</h3>
+        <p style="margin:.25rem 0 0;color:var(--muted)">Toggle visibility of map layers using the panel on the map.</p>
+      </div>
+      <!-- reuse the same map frame for consistency -->
+      <div class="frame">
+        <!-- map -->
+        <div class="map"></div>
+        <!-- show only layers panel -->
+        <aside class="layers" style="top:10px; left:10px;">
+          <h4>Layers</h4>
+          <label class="layer"><input type="checkbox" checked> Tax Zones</label>
+          <label class="layer"><input type="checkbox" checked> Property Boundaries</label>
+          <label class="layer"><input type="checkbox" checked> Payment Status</label>
+          <label class="layer"><input type="checkbox" checked> Infrastructure</label>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Analytics info screen -->
+    <section id="gis-analytics" class="vsec hidden">
+      <div class="card" style="margin-bottom:12px;">
+        <h3 style="margin:0">Analytics</h3>
+        <p style="margin:.25rem 0 0;color:var(--muted)">Example charts for collection, delinquency, and trends.</p>
+      </div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;">
+        <div class="card"><strong>Tax Collection by Region</strong><div class="chart">Chart placeholder</div></div>
+        <div class="card"><strong>Payment Delinquency Heatmap</strong><div class="chart">Heatmap placeholder</div></div>
+        <div class="card"><strong>Property Value Trends</strong><div class="chart">Trend placeholder</div></div>
+        <div class="card"><strong>Top Tax Zones</strong><div class="chart">Chart placeholder</div></div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section id="gis-settings" class="vsec hidden">
+      <div class="card" style="display:grid; gap:10px;">
+        <h3 style="margin:0">Map Settings</h3>
+        <label>Default Basemap
+          <select style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;">
+            <option>Light</option><option>Dark</option><option>Satellite</option>
+          </select>
+        </label>
+        <label>Show Labels <input type="checkbox" checked></label>
+        <div><button class="btn">Save</button></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="container wrap">
+      <div class="wrap" style="justify-content:center; width:100%; gap:18px;">
+        <a href="#">Privacy Policy</a> •
+        <a href="#">Terms of Service</a> •
+        <a href="#">Contact</a>
+      </div>
+    </div>
+  </footer>
+</section>
+
+<script>
+/* --------------- View (Taxpayer/Admin/GIS) switching --------------- */
+const tabs = document.querySelectorAll('.tab');
+const views = ['view-taxpayer','view-admin','view-gis'];
+
+function switchView(targetId){
+  tabs.forEach(x => x.classList.toggle('active', x.dataset.target === targetId));
+  views.forEach(v => document.getElementById(v).classList.toggle('hidden', v !== targetId));
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+tabs.forEach(t => t.addEventListener('click', () => switchView(t.dataset.target)));
+
+/* --------------- Per-view navbar routing (UI only) --------------- */
+function setupViewNav(navAttr, defaultSectionId){
+  const nav = document.querySelector(`nav[data-nav="${navAttr}"]`);
+  if(!nav) return;
+  const links = nav.querySelectorAll('a[data-target], a[data-switch-view], a[data-logout]');
+  const sectionPrefix = navAttr === 'taxpayer' ? 'tax-' : navAttr === 'admin' ? 'admin-' : 'gis-';
+  const secSelector = `section.vsec[id^="${sectionPrefix}"]`;
+
+  function showSection(id){
+    document.querySelectorAll(secSelector).forEach(s => s.classList.toggle('hidden', s.id !== id));
+    nav.querySelectorAll('a[data-target]').forEach(a => a.classList.toggle('active', a.dataset.target === id));
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+  // default section
+  showSection(defaultSectionId);
+
+  links.forEach(a => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+
+      // Logout (UI only)
+      if(a.hasAttribute('data-logout')) {
+        alert('Logged out (UI only)');
+        return;
+      }
+      // Cross-view switcher (e.g., Admin -> GIS)
+      if(a.hasAttribute('data-switch-view')) {
+        switchView(a.getAttribute('data-switch-view'));
+        return;
+      }
+      // Internal section switch
+      const target = a.getAttribute('data-target');
+      if(target) showSection(target);
+    });
+  });
+}
+
+setupViewNav('taxpayer','tax-home');
+setupViewNav('admin','admin-dashboard');
+setupViewNav('gis','gis-map');
+
+/* --------------- GIS map interactions (visual only) --------------- */
+let zoomLevel = 1;
+const mapEl = document.getElementById('map');
+if(mapEl){
+  const zoomInBtn = document.getElementById('zoomIn');
+  const zoomOutBtn = document.getElementById('zoomOut');
+  if(zoomInBtn && zoomOutBtn){
+    zoomInBtn.onclick = () => {
+      zoomLevel = Math.min(zoomLevel + 0.1, 1.6);
+      mapEl.style.transform = `scale(${zoomLevel})`;
+      mapEl.style.transformOrigin = 'center center';
+    };
+    zoomOutBtn.onclick = () => {
+      zoomLevel = Math.max(zoomLevel - 0.1, 0.7);
+      mapEl.style.transform = `scale(${zoomLevel})`;
+      mapEl.style.transformOrigin = 'center center';
+    };
+  }
+}
+
+document.querySelectorAll('[data-toggle]').forEach(cb => {
+  cb.addEventListener('change', (e) => {
+    const key = e.target.dataset.toggle;
+    const overlay = document.querySelector(`.overlay[data-layer="${key}"]`);
+    if (overlay) overlay.style.display = e.target.checked ? 'block' : 'none';
+  });
+});
+
+const searchBtn = document.getElementById('searchBtn');
+if(searchBtn){
+  searchBtn.onclick = () => {
+    alert('Search triggered (UI only)');
+  };
+}
+</script>
+</body>
+</html>
